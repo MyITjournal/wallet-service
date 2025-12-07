@@ -7,13 +7,16 @@ This is a NestJS backend application implementing Google OAuth authentication an
 ### Authentication
 
 - Google OAuth 2.0 Sign-In
+- JWT token generation and validation
 - User profile management (email, name, picture)
 - Secure callback handling
-- Session-less authentication
+- Protected routes with JWT guards
 
 ### Payments
 
 - Paystack payment initialization
+- User-specific transaction tracking
+- Transaction history for authenticated users
 - Webhook verification with HMAC SHA512
 - Transaction status tracking
 - Idempotency support
@@ -72,6 +75,10 @@ GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 PAYSTACK_SECRET_KEY=sk_test_your_secret_key
 PAYSTACK_WEBHOOK_SECRET=your_webhook_secret
 
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_EXPIRES_IN=7d
+
 # Application Configuration
 PORT=3000
 NODE_ENV=development
@@ -126,7 +133,8 @@ GET /auth/google/callback?code={authorization_code}
 {
   "user_id": "uuid",
   "email": "user@example.com",
-  "name": "John Doe"
+  "name": "John Doe",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -142,6 +150,7 @@ GET /auth/google/callback?code={authorization_code}
 
 ```http
 POST /payments/paystack/initiate
+Authorization: Bearer {jwt_token}
 Content-Type: application/json
 
 {
@@ -198,6 +207,7 @@ Content-Type: application/json
 
 ```http
 GET /payments/{reference}/status?refresh=true
+Authorization: Bearer {jwt_token}
 ```
 
 **Success Response (200):**
@@ -221,6 +231,39 @@ GET /payments/{reference}/status?refresh=true
 - `404` - Transaction not found
 - `500` - Verification failed
 
+#### 6. Get Transaction History
+
+```http
+GET /payments/history
+Authorization: Bearer {jwt_token}
+```
+
+**Success Response (200):**
+
+```json
+[
+  {
+    "reference": "TXN_1733567890123_abc123",
+    "status": "success",
+    "amount": 5000,
+    "paid_at": "2025-12-07T10:30:00.000Z",
+    "created_at": "2025-12-07T10:25:00.000Z"
+  },
+  {
+    "reference": "TXN_1733567890124_def456",
+    "status": "pending",
+    "amount": 10000,
+    "paid_at": null,
+    "created_at": "2025-12-07T09:15:00.000Z"
+  }
+]
+```
+
+**Error Responses:**
+
+- `401` - Unauthorized (missing or invalid JWT token)
+- `500` - Server error
+
 ## 🏗️ Project Structure
 
 ```
@@ -243,8 +286,13 @@ src/
 │   │   ├── auth.controller.ts
 │   │   ├── auth.service.ts
 │   │   ├── auth.module.ts
-│   │   └── strategies/
-│   │       └── google.strategy.ts
+│   │   ├── strategies/
+│   │   │   ├── google.strategy.ts
+│   │   │   └── jwt.strategy.ts
+│   │   ├── guards/
+│   │   │   └── jwt-auth.guard.ts
+│   │   └── decorators/
+│   │       └── current-user.decorator.ts
 │   ├── users/
 │   │   ├── entities/
 │   │   │   └── user.entity.ts

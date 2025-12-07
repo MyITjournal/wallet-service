@@ -29,14 +29,21 @@ export class PaymentsService {
     );
   }
 
-  async initiatePayment(dto: InitiatePaymentDto) {
+  async initiatePayment(
+    dto: InitiatePaymentDto,
+    userId?: number,
+    userEmail?: string,
+  ) {
     if (!dto.amount || dto.amount <= 0 || !Number.isInteger(dto.amount)) {
       throw new BadRequestException(SYS_MESSAGES.INVALID_INPUT);
     }
 
     // Check for duplicate transaction (idempotency)
     const existingTransaction =
-      await this.paymentActions.findRecentDuplicateTransaction(dto.amount);
+      await this.paymentActions.findRecentDuplicateTransaction(
+        dto.amount,
+        userId,
+      );
 
     if (existingTransaction) {
       return {
@@ -48,11 +55,15 @@ export class PaymentsService {
     // Generate unique reference
     const reference = this.paymentActions.generateReference();
 
+    // Use authenticated user's email or default
+    const email = userEmail || 'guest@example.com';
+
     // Initialize payment with Paystack (throws on error)
     const paystackData =
       await this.paymentActions.initializePaystackTransaction(
         reference,
         dto.amount,
+        email,
       );
 
     // Create transaction record
@@ -60,6 +71,7 @@ export class PaymentsService {
       reference,
       dto.amount,
       paystackData.authorization_url,
+      userId,
     );
 
     return {
@@ -135,5 +147,17 @@ export class PaymentsService {
       amount: transaction.amount * 100,
       paid_at: transaction.paid_at,
     };
+  }
+
+  async getUserTransactions(userId: number) {
+    const transactions = await this.paymentActions.findUserTransactions(userId);
+
+    return transactions.map((transaction) => ({
+      reference: transaction.reference,
+      status: transaction.status,
+      amount: transaction.amount * 100,
+      paid_at: transaction.paid_at,
+      created_at: transaction.created_at,
+    }));
   }
 }

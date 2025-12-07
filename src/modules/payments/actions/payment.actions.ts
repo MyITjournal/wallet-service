@@ -23,12 +23,18 @@ export class PaymentModelActions {
     private readonly configService: ConfigService,
   ) {}
 
-  async findRecentDuplicateTransaction(amount: number) {
+  async findRecentDuplicateTransaction(amount: number, userId?: number) {
+    const where: any = {
+      amount: amount / 100,
+      status: TransactionStatus.PENDING,
+    };
+
+    if (userId) {
+      where.user = { id: userId };
+    }
+
     const existingTransaction = await this.transactionRepository.findOne({
-      where: {
-        amount: amount / 100,
-        status: TransactionStatus.PENDING,
-      },
+      where,
       order: { created_at: 'DESC' },
     });
 
@@ -42,7 +48,11 @@ export class PaymentModelActions {
     return null;
   }
 
-  async initializePaystackTransaction(reference: string, amount: number) {
+  async initializePaystackTransaction(
+    reference: string,
+    amount: number,
+    email: string,
+  ) {
     const secretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
     if (!secretKey) {
       throw new InternalServerErrorException(SYS_MESSAGES.PAYMENT_CONFIG_ERROR);
@@ -52,7 +62,7 @@ export class PaymentModelActions {
       `${this.paystackBaseUrl}/transaction/initialize`,
       {
         amount,
-        email: 'user@example.com',
+        email,
         reference,
       },
       {
@@ -81,13 +91,20 @@ export class PaymentModelActions {
     reference: string,
     amount: number,
     authorizationUrl: string,
+    userId?: number,
   ) {
-    const transaction = this.transactionRepository.create({
+    const transactionData: any = {
       reference,
       amount: amount / 100,
       authorization_url: authorizationUrl,
       status: TransactionStatus.PENDING,
-    });
+    };
+
+    if (userId) {
+      transactionData.user = { id: userId };
+    }
+
+    const transaction = this.transactionRepository.create(transactionData);
 
     return await this.transactionRepository.save(transaction);
   }
@@ -113,6 +130,15 @@ export class PaymentModelActions {
   async findTransactionByReference(reference: string) {
     return await this.transactionRepository.findOne({
       where: { reference },
+      relations: ['user'],
+    });
+  }
+
+  async findUserTransactions(userId: number) {
+    return await this.transactionRepository.find({
+      where: { user: { id: userId } as any },
+      order: { created_at: 'DESC' },
+      relations: ['user'],
     });
   }
 

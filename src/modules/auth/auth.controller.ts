@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Req,
   Res,
   UseGuards,
@@ -48,9 +50,19 @@ export class AuthController {
         user_id: user.user_id,
         email: user.email,
         name: user.name,
+        access_token: user.access_token,
       });
     } catch (error) {
       throw new InternalServerErrorException(SYS_MESSAGES.OAUTH_PROVIDER_ERROR);
     }
+  }
+
+  @Post('google/token')
+  async exchangeGoogleToken(@Body('access_token') accessToken: string) {
+    if (!accessToken) {
+      throw new BadRequestException('Google access token is required');
+    }
+
+    return await this.authService.verifyGoogleToken(accessToken);
   }
 }
