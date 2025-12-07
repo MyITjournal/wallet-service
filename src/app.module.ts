@@ -4,10 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
-import { PaymentModule } from './modules/payment/payment.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { User } from './modules/users/entities/user.entity';
-import { Transaction } from './modules/payment/entities/transaction.entity';
+import { Transaction } from './modules/payments/entities/transaction.entity';
 
 @Module({
   imports: [
@@ -30,7 +30,7 @@ import { Transaction } from './modules/payment/entities/transaction.entity';
       inject: [ConfigService],
     }),
     UsersModule,
-    PaymentModule,
+    PaymentsModule,
     AuthModule,
   ],
   controllers: [AppController],
