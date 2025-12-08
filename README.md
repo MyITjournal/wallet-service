@@ -442,3 +442,4 @@ This project is licensed under the MIT License.
 **Ade Adebayo**
 
 - GitHub: [@MyITjournal](https://github.com/MyITjournal)
+- Base URL: https://paystack-integration-76e6df6dd489.herokuapp.com/
