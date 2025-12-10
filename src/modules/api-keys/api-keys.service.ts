@@ -4,22 +4,21 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, Between } from 'typeorm';
+import { MoreThan } from 'typeorm';
 import { ApiKey } from './entities/api-key.entity';
-import { ApiKeyUsageLog } from './entities/api-key-usage-log.entity';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
 import { RolloverApiKeyDto } from './dto/rollover-api-key.dto';
+import { ApiKeyModelActions } from './model-actions/api-key.model-actions';
+import { ApiKeyUsageLogModelActions } from './model-actions/api-key-usage-log.model-actions';
+import { ApiKeyUsageLog } from './entities/api-key-usage-log.entity';
 import { randomBytes } from 'crypto';
 
 @Injectable()
 export class ApiKeysService {
   constructor(
-    @InjectRepository(ApiKey)
-    private readonly apiKeyRepository: Repository<ApiKey>,
-    @InjectRepository(ApiKeyUsageLog)
-    private readonly usageLogRepository: Repository<ApiKeyUsageLog>,
+    private readonly apiKeyActions: ApiKeyModelActions,
+    private readonly usageLogActions: ApiKeyUsageLogModelActions,
   ) {}
 
   // Generate a secure random API key
@@ -44,12 +43,7 @@ export class ApiKeysService {
   // Create a new API key
   async create(dto: CreateApiKeyDto, userId: string) {
     // Check maximum 5 active keys per user
-    const activeKeysCount = await this.apiKeyRepository.count({
-      where: {
-        created_by: { id: userId },
-        is_active: true,
-      },
-    });
+    const activeKeysCount = await this.apiKeyActions.countActiveByUserId(userId);
 
     if (activeKeysCount >= 5) {
       throw new BadRequestException(
@@ -60,19 +54,18 @@ export class ApiKeysService {
     const key = this.generateApiKey();
     const expiresAt = this.calculateExpiryDate(dto.expiry);
 
-    const apiKey = new ApiKey();
-    apiKey.key = key;
-    apiKey.name = dto.name;
-    if (dto.description) apiKey.description = dto.description;
-    apiKey.created_by = { id: userId } as any;
-    apiKey.permissions = dto.permissions;
-    apiKey.rate_limit_per_hour = dto.rate_limit_per_hour || 100;
-    apiKey.rate_limit_per_day = dto.rate_limit_per_day || 1000;
-    apiKey.expires_at = expiresAt;
-    if (dto.ip_whitelist) apiKey.ip_whitelist = dto.ip_whitelist;
-    apiKey.is_active = true;
-
-    const saved = await this.apiKeyRepository.save(apiKey);
+    const saved = await this.apiKeyActions.createApiKey({
+      key,
+      name: dto.name,
+      description: dto.description,
+      created_by: { id: userId } as any,
+      permissions: dto.permissions,
+      rate_limit_per_hour: dto.rate_limit_per_hour || 100,
+      rate_limit_per_day: dto.rate_limit_per_day || 1000,
+      expires_at: expiresAt,
+      ip_whitelist: dto.ip_whitelist,
+      is_active: true,
+    });
 
     return {
       api_key: saved.key,
@@ -82,10 +75,7 @@ export class ApiKeysService {
 
   // List all API keys for a user (without the actual key)
   async findAll(userId: string) {
-    const apiKeys = await this.apiKeyRepository.find({
-      where: { created_by: { id: userId } },
-      order: { created_at: 'DESC' },
-    });
+    const apiKeys = await this.apiKeyActions.findByUserId(userId);
 
     return apiKeys.map((key) => ({
       id: key.id,
@@ -104,9 +94,7 @@ export class ApiKeysService {
 
   // Get a single API key by ID
   async findOne(id: string, userId: string) {
-    const apiKey = await this.apiKeyRepository.findOne({
-      where: { id, created_by: { id: userId } },
-    });
+    const apiKey = await this.apiKeyActions.findByIdWithCreator(id, userId);
 
     if (!apiKey) {
       throw new NotFoundException('API key not found');
@@ -130,9 +118,7 @@ export class ApiKeysService {
 
   // Update an API key
   async update(id: string, dto: UpdateApiKeyDto, userId: string) {
-    const apiKey = await this.apiKeyRepository.findOne({
-      where: { id, created_by: { id: userId } },
-    });
+    const apiKey = await this.apiKeyActions.findByIdWithCreator(id, userId);
 
     if (!apiKey) {
       throw new NotFoundException('API key not found');
@@ -143,7 +129,7 @@ export class ApiKeysService {
       expires_at: dto.expires_at ? new Date(dto.expires_at) : apiKey.expires_at,
     });
 
-    const updated = await this.apiKeyRepository.save(apiKey);
+    const updated = await this.apiKeyActions.updateApiKey(apiKey);
 
     return {
       id: updated.id,
@@ -160,16 +146,14 @@ export class ApiKeysService {
 
   // Delete/deactivate an API key
   async delete(id: string, userId: string) {
-    const apiKey = await this.apiKeyRepository.findOne({
-      where: { id, created_by: { id: userId } },
-    });
+    const apiKey = await this.apiKeyActions.findByIdWithCreator(id, userId);
 
     if (!apiKey) {
       throw new NotFoundException('API key not found');
     }
 
     apiKey.is_active = false;
-    await this.apiKeyRepository.save(apiKey);
+    await this.apiKeyActions.updateApiKey(apiKey);
 
     return { message: 'API key deactivated successfully' };
   }
@@ -180,10 +164,7 @@ export class ApiKeysService {
     requiredPermission: string,
     ipAddress?: string,
   ): Promise<ApiKey> {
-    const apiKey = await this.apiKeyRepository.findOne({
-      where: { key },
-      relations: ['created_by'],
-    });
+    const apiKey = await this.apiKeyActions.findByKey(key);
 
     if (!apiKey) {
       throw new UnauthorizedException('Invalid API key');
@@ -227,12 +208,10 @@ export class ApiKeysService {
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Check hourly limit
-    const hourlyCount = await this.usageLogRepository.count({
-      where: {
-        api_key: { id: apiKey.id },
-        logged_at: MoreThan(oneHourAgo),
-      },
-    });
+    const hourlyCount = await this.usageLogActions.countRecentUsage(
+      apiKey.id,
+      oneHourAgo,
+    );
 
     if (hourlyCount >= apiKey.rate_limit_per_hour) {
       throw new UnauthorizedException(
@@ -241,12 +220,10 @@ export class ApiKeysService {
     }
 
     // Check daily limit
-    const dailyCount = await this.usageLogRepository.count({
-      where: {
-        api_key: { id: apiKey.id },
-        logged_at: MoreThan(oneDayAgo),
-      },
-    });
+    const dailyCount = await this.usageLogActions.countRecentUsage(
+      apiKey.id,
+      oneDayAgo,
+    );
 
     if (dailyCount >= apiKey.rate_limit_per_day) {
       throw new UnauthorizedException(
@@ -266,7 +243,7 @@ export class ApiKeysService {
     responseTimeMs?: number,
     errorMessage?: string,
   ) {
-    const log = this.usageLogRepository.create({
+    await this.usageLogActions.createLog({
       api_key: apiKey,
       endpoint,
       method,
@@ -277,18 +254,14 @@ export class ApiKeysService {
       error_message: errorMessage,
     });
 
-    await this.usageLogRepository.save(log);
-
     // Update last_used_at
     apiKey.last_used_at = new Date();
-    await this.apiKeyRepository.save(apiKey);
+    await this.apiKeyActions.updateApiKey(apiKey);
   }
 
   // Get usage statistics for an API key
   async getUsageStats(id: string, userId: string, days: number = 7) {
-    const apiKey = await this.apiKeyRepository.findOne({
-      where: { id, created_by: { id: userId } },
-    });
+    const apiKey = await this.apiKeyActions.findByIdWithCreator(id, userId);
 
     if (!apiKey) {
       throw new NotFoundException('API key not found');
@@ -297,14 +270,10 @@ export class ApiKeysService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const logs = await this.usageLogRepository.find({
-      where: {
-        api_key: { id: apiKey.id },
-        logged_at: MoreThan(startDate),
-      },
-      order: { logged_at: 'DESC' },
-      take: 1000,
-    });
+    const logs = await this.usageLogActions.findByApiKeyId(
+      apiKey.id,
+      startDate,
+    );
 
     const totalRequests = logs.length;
     const successfulRequests = logs.filter(
@@ -373,19 +342,13 @@ export class ApiKeysService {
 
   // Get recent usage logs for an API key
   async getRecentLogs(id: string, userId: string, limit: number = 50) {
-    const apiKey = await this.apiKeyRepository.findOne({
-      where: { id, created_by: { id: userId } },
-    });
+    const apiKey = await this.apiKeyActions.findByIdWithCreator(id);
 
-    if (!apiKey) {
+    if (!apiKey || apiKey.created_by.id !== userId) {
       throw new NotFoundException('API key not found');
     }
 
-    const logs = await this.usageLogRepository.find({
-      where: { api_key: { id: apiKey.id } },
-      order: { logged_at: 'DESC' },
-      take: limit,
-    });
+    const logs = await this.usageLogActions.findByApiKeyId(apiKey.id);
 
     return logs.map((log) => ({
       id: log.id,
@@ -402,9 +365,10 @@ export class ApiKeysService {
   // Rollover an expired API key
   async rollover(dto: RolloverApiKeyDto, userId: string) {
     // Find the expired key
-    const expiredKey = await this.apiKeyRepository.findOne({
-      where: { id: dto.expired_key_id, created_by: { id: userId } },
-    });
+    const expiredKey = await this.apiKeyActions.findExpiredKeyForRollover(
+      dto.expired_key_id,
+      userId,
+    );
 
     if (!expiredKey) {
       throw new NotFoundException('API key not found');
@@ -418,12 +382,7 @@ export class ApiKeysService {
     }
 
     // Check maximum 5 active keys per user (before creating new one)
-    const activeKeysCount = await this.apiKeyRepository.count({
-      where: {
-        created_by: { id: userId },
-        is_active: true,
-      },
-    });
+    const activeKeysCount = await this.apiKeyActions.countActiveByUserId(userId);
 
     if (activeKeysCount >= 5) {
       throw new BadRequestException(
@@ -435,19 +394,18 @@ export class ApiKeysService {
     const newKey = this.generateApiKey();
     const expiresAt = this.calculateExpiryDate(dto.expiry);
 
-    const apiKey = new ApiKey();
-    apiKey.key = newKey;
-    apiKey.name = expiredKey.name; // Reuse same name
-    apiKey.description = expiredKey.description;
-    apiKey.created_by = { id: userId } as any;
-    apiKey.permissions = expiredKey.permissions; // Reuse same permissions
-    apiKey.rate_limit_per_hour = expiredKey.rate_limit_per_hour;
-    apiKey.rate_limit_per_day = expiredKey.rate_limit_per_day;
-    apiKey.expires_at = expiresAt; // New expiry date
-    apiKey.ip_whitelist = expiredKey.ip_whitelist;
-    apiKey.is_active = true;
-
-    const saved = await this.apiKeyRepository.save(apiKey);
+    const saved = await this.apiKeyActions.createApiKey({
+      key: newKey,
+      name: expiredKey.name, // Reuse same name
+      description: expiredKey.description,
+      created_by: { id: userId } as any,
+      permissions: expiredKey.permissions, // Reuse same permissions
+      rate_limit_per_hour: expiredKey.rate_limit_per_hour,
+      rate_limit_per_day: expiredKey.rate_limit_per_day,
+      expires_at: expiresAt, // New expiry date
+      ip_whitelist: expiredKey.ip_whitelist,
+      is_active: true,
+    });
 
     return {
       api_key: saved.key, // Only shown once at creation
