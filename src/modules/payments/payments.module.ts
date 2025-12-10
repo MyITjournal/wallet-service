@@ -2,17 +2,13 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
-import { Transaction } from './entities/transaction.entity';
 import { WalletModule } from '../wallet/wallet.module';
-import { PaymentModelActions } from './model-actions/payment.model-actions';
+import { SharedModule } from '../shared/shared.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Transaction]),
-    forwardRef(() => WalletModule),
-  ],
+  imports: [SharedModule, forwardRef(() => WalletModule)],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PaymentModelActions],
+  providers: [PaymentsService],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

@@ -7,15 +7,15 @@ import {
 
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { SYS_MESSAGES } from '../../common/constants/sys-messages';
-import { PaymentModelActions } from './model-actions/payment.model-actions';
-import { PaystackApiService } from '../../common/services/paystack-api.service';
+import { TransactionModelActions } from '../shared/model-actions/transaction.model-actions';
+import { PaystackApiService } from '../shared/services/paystack-api.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PaystackWebhookPayload } from '../../common/interfaces/paystack.interface';
 
 @Injectable()
 export class PaymentsService {
   constructor(
-    private readonly paymentActions: PaymentModelActions,
+    private readonly transactionActions: TransactionModelActions,
     private readonly paystackApi: PaystackApiService,
     private readonly walletService: WalletService,
   ) {}
@@ -31,7 +31,7 @@ export class PaymentsService {
 
     // Check for duplicate transaction (idempotency)
     const existingTransaction =
-      await this.paymentActions.findRecentDuplicateTransaction(
+      await this.transactionActions.findRecentDuplicateTransaction(
         dto.amount,
         userId,
       );
@@ -50,7 +50,7 @@ export class PaymentsService {
 
     do {
       reference = this.paystackApi.generateReference();
-      const exists = await this.paymentActions.checkReferenceExists(reference);
+      const exists = await this.transactionActions.checkReferenceExists(reference);
       if (!exists) break;
       attempts++;
     } while (attempts < maxAttempts);
@@ -72,7 +72,7 @@ export class PaymentsService {
     );
 
     // Create transaction record
-    await this.paymentActions.createTransaction(
+    await this.transactionActions.createTransaction(
       reference,
       dto.amount,
       paystackData.authorization_url,
@@ -102,10 +102,10 @@ export class PaymentsService {
 
     // Find and update transaction
     const transaction =
-      await this.paymentActions.findTransactionByReference(reference);
+      await this.transactionActions.findTransactionByReference(reference);
 
     if (transaction) {
-      await this.paymentActions.updateTransactionStatus(
+      await this.transactionActions.updateTransactionStatus(
         transaction,
         status,
         status === 'success' ? new Date() : undefined,
@@ -128,7 +128,7 @@ export class PaymentsService {
   async getTransactionStatus(reference: string, refresh: boolean = false) {
     // Get transaction from DB
     let transaction =
-      await this.paymentActions.findTransactionByReference(reference);
+      await this.transactionActions.findTransactionByReference(reference);
 
     // If missing or refresh requested, verify with Paystack
     if (!transaction || refresh) {
@@ -137,10 +137,10 @@ export class PaymentsService {
       if (!transaction) {
         // Create new transaction from Paystack data
         transaction =
-          await this.paymentActions.createTransactionFromPaystack(paystackData);
+          await this.transactionActions.createTransactionFromPaystack(paystackData);
       } else {
         // Update existing transaction
-        await this.paymentActions.updateTransactionStatus(
+        await this.transactionActions.updateTransactionStatus(
           transaction,
           paystackData.status,
           paystackData.paid_at ? new Date(paystackData.paid_at) : undefined,
@@ -161,7 +161,7 @@ export class PaymentsService {
   }
 
   async getUserTransactions(userId: string) {
-    const transactions = await this.paymentActions.findUserTransactions(userId);
+    const transactions = await this.transactionActions.findUserTransactions(userId);
 
     return transactions.map((transaction) => ({
       reference: transaction.reference,
