@@ -8,15 +8,15 @@ import {
 import { DataSource } from 'typeorm';
 import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
-import { Transaction } from '../payments/entities/transaction.entity';
+import { Transaction } from '../shared/entities/transaction.entity';
 import { FundWalletDto } from './dto/fund-wallet.dto';
 import { WithdrawWalletDto } from './dto/withdraw-wallet.dto';
 import { TransferWalletDto } from './dto/transfer-wallet.dto';
 import { WalletTransactionType, TransactionStatus } from '../../common/enums';
 import { WalletModelActions } from './model-actions/wallet.model-actions';
 import { WalletTransactionModelActions } from './model-actions/wallet-transaction.model-actions';
-import { PaymentModelActions } from '../payments/model-actions/payment.model-actions';
-import { PaystackApiService } from '../../common/services/paystack-api.service';
+import { TransactionModelActions } from '../shared/model-actions/transaction.model-actions';
+import { PaystackApiService } from '../shared/services/paystack-api.service';
 import { UserModelActions } from '../users/model-actions/user.model-actions';
 import { PaystackWebhookPayload } from '../../common/interfaces/paystack.interface';
 
@@ -25,7 +25,7 @@ export class WalletService {
   constructor(
     private readonly walletActions: WalletModelActions,
     private readonly walletTransactionActions: WalletTransactionModelActions,
-    private readonly paymentActions: PaymentModelActions,
+    private readonly transactionActions: TransactionModelActions,
     private readonly paystackApi: PaystackApiService,
     private readonly userActions: UserModelActions,
     private readonly dataSource: DataSource,
@@ -88,7 +88,7 @@ export class WalletService {
         wallet.user.email,
       );
 
-      await this.paymentActions.createTransaction(
+      await this.transactionActions.createTransaction(
         reference,
         dto.amount, // Already in kobo
         response.authorization_url,
@@ -98,7 +98,6 @@ export class WalletService {
       return {
         reference,
         authorization_url: response.authorization_url,
-        access_code: response.access_code,
       };
     } catch (error) {
       const errorMessage =
@@ -321,7 +320,7 @@ export class WalletService {
       }
 
       const recipientWallet = await queryRunner.manager.findOne(Wallet, {
-        where: { walletNumber: dto.walletNumber },
+        where: { walletNumber: dto.wallet_number },
         relations: ['user'],
         lock: { mode: 'pessimistic_write' },
       });
@@ -357,8 +356,8 @@ export class WalletService {
         status: TransactionStatus.SUCCESS,
         reference,
         description:
-          dto.description || `Transfer to wallet ${dto.walletNumber}`,
-        metadata: JSON.stringify({ recipient_wallet: dto.walletNumber }),
+          dto.description || `Transfer to wallet ${dto.wallet_number}`,
+        metadata: JSON.stringify({ recipient_wallet: dto.wallet_number }),
       });
 
       await queryRunner.manager.save(senderTransaction);
@@ -446,10 +445,10 @@ export class WalletService {
     const status = payload.data.status;
 
     const transaction =
-      await this.paymentActions.findTransactionByReference(reference);
+      await this.transactionActions.findTransactionByReference(reference);
 
     if (transaction) {
-      await this.paymentActions.updateTransactionStatus(
+      await this.transactionActions.updateTransactionStatus(
         transaction,
         status,
         status === 'success' ? new Date() : undefined,
@@ -469,7 +468,7 @@ export class WalletService {
 
   async getDepositStatus(reference: string) {
     const transaction =
-      await this.paymentActions.findTransactionByReference(reference);
+      await this.transactionActions.findTransactionByReference(reference);
 
     if (!transaction) {
       throw new NotFoundException('Transaction not found');

@@ -12,6 +12,7 @@ import {
   Headers,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { JwtOrApiKeyGuard } from '../auth/guards/jwt-or-api-key.guard';
 import { CurrentUser, RequirePermission } from '../../common/decorators';
@@ -21,14 +22,27 @@ import { WithdrawWalletDto } from './dto/withdraw-wallet.dto';
 import type { PaystackWebhookPayload } from '../../common/interfaces/paystack.interface';
 import { TransferWalletDto } from './dto/transfer-wallet.dto';
 import { SYS_MESSAGES } from '../../common/constants/sys-messages';
+import {
+  ApiWalletTags,
+  ApiWalletBearerAuth,
+  ApiWalletDeposit,
+  ApiPaystackWebhook,
+  ApiVerifyDepositStatus,
+  ApiGetWalletBalance,
+  ApiWalletTransfer,
+  ApiTransactionHistory,
+} from './docs/wallet-docs.decorator';
 
 @Controller('wallet')
+@ApiWalletTags()
+@ApiWalletBearerAuth()
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
   @Get('balance')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
+  @ApiGetWalletBalance()
   async getBalance(@CurrentUser() user: AuthenticatedUser) {
     return this.walletService.getBalance(user.userId);
   }
@@ -37,6 +51,7 @@ export class WalletController {
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('deposit')
   @HttpCode(HttpStatus.CREATED)
+  @ApiWalletDeposit()
   async fundWallet(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: FundWalletDto,
@@ -46,6 +61,7 @@ export class WalletController {
 
   @Post('paystack/webhook')
   @HttpCode(HttpStatus.OK)
+  @ApiPaystackWebhook()
   async handlePaystackWebhook(
     @Headers('x-paystack-signature') signature: string,
     @Body() payload: PaystackWebhookPayload,
@@ -59,6 +75,7 @@ export class WalletController {
   @Get('deposit/:reference/status')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
+  @ApiVerifyDepositStatus()
   async getDepositStatus(@Param('reference') reference: string) {
     if (!reference || reference.trim() === '') {
       throw new BadRequestException(SYS_MESSAGES.INVALID_INPUT);
@@ -70,6 +87,7 @@ export class WalletController {
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('transfer')
   @HttpCode(HttpStatus.CREATED)
+  @ApiExcludeEndpoint()
   async withdrawFromWallet(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: WithdrawWalletDto,
@@ -81,6 +99,7 @@ export class WalletController {
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('transfer')
   @HttpCode(HttpStatus.CREATED)
+  @ApiWalletTransfer()
   async transferToUser(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: TransferWalletDto,
@@ -91,6 +110,7 @@ export class WalletController {
   @Get('transactions')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
+  @ApiTransactionHistory()
   async getTransactionHistory(
     @CurrentUser() user: AuthenticatedUser,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,

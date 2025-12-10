@@ -10,10 +10,12 @@ import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { WalletModelActions } from './model-actions/wallet.model-actions';
 import { WalletTransactionModelActions } from './model-actions/wallet-transaction.model-actions';
+import { SharedModule } from '../shared/shared.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Wallet, WalletTransaction]),
+    SharedModule,
     AuthModule,
     ApiKeysModule,
     UsersModule,

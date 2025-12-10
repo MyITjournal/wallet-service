@@ -32,9 +32,8 @@ async function bootstrap() {
     .setDescription('API documentation for TR Wallet Service')
     .setVersion('1.0')
     .addTag('Authentication', 'Google OAuth and JWT authentication endpoints')
-    .addTag('Wallet', 'Wallet management and transactions')
-    .addTag('Payments', 'Payment processing with Paystack')
     .addTag('API Keys', 'API key management for service-to-service auth')
+    .addTag('Wallet', 'Wallet management and transactions')
     .addBearerAuth({
       type: 'http',
       scheme: 'bearer',

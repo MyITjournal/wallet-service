@@ -11,6 +11,7 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
+import { ApiExcludeController } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { SYS_MESSAGES } from '../../common/constants/sys-messages';
@@ -21,6 +22,7 @@ import type { JwtPayload } from '../../common/interfaces/jwt.interface';
 import { TransactionStatus } from '../../common/enums';
 
 @Controller('payments')
+@ApiExcludeController()
 export class PaymentsController {
   constructor(private paymentsService: PaymentsService) {}
 
