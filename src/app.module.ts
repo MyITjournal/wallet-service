@@ -26,7 +26,9 @@ import { PaystackApiService } from './common/services/paystack-api.service';
             type: 'postgres',
             url: databaseUrl,
             autoLoadEntities: true,
-            synchronize: configService.get<string>('NODE_ENV') !== 'production',
+            synchronize:
+              configService.get<string>('TYPEORM_SYNCHRONIZE') === 'true' ||
+              configService.get<string>('NODE_ENV') !== 'production',
             ssl: {
               rejectUnauthorized: false, // Required for Heroku Postgres
             },
