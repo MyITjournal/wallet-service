@@ -16,17 +16,24 @@ import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { SYS_MESSAGES } from '../../common/constants/sys-messages';
 import type { GoogleUserData } from '../../common/interfaces/jwt.interface';
+import {
+  ApiAuthTags,
+  ApiGoogleAuth,
+  ApiGoogleAuthCallback,
+} from './docs/auth-docs.decorator';
 
 interface RequestWithUser extends Request {
   user?: GoogleUserData;
 }
 
 @Controller('auth')
+@ApiAuthTags()
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
+  @ApiGoogleAuth()
   async googleAuth() {
     // Passport AuthGuard automatically handles 302 redirect to Google OAuth consent page
     // Any errors will be caught by exception filters
@@ -34,6 +41,7 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
+  @ApiGoogleAuthCallback()
   async googleAuthRedirect(
     @Req() req: RequestWithUser,
     @Res() res: Response,
@@ -60,14 +68,5 @@ export class AuthController {
     } catch {
       throw new InternalServerErrorException(SYS_MESSAGES.OAUTH_PROVIDER_ERROR);
     }
-  }
-
-  @Post('google/token')
-  async exchangeGoogleToken(@Body('access_token') accessToken: string) {
-    if (!accessToken) {
-      throw new BadRequestException('Google access token is required');
-    }
-
-    return await this.authService.verifyGoogleToken(accessToken);
   }
 }

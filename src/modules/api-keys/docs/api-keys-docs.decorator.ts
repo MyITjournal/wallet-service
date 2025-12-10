@@ -18,12 +18,7 @@ export const ApiCreateApiKey = () =>
     ApiOperation({
       summary: 'Create API Key',
       description:
-        'Creates a new API key with specified permissions and expiry. ' +
-        'Rules:\n' +
-        '• expiry accepts only: 1H, 1D, 1M, 1Y (Hour, Day, Month, Year)\n' +
-        '• Backend converts expiry into real datetime and stores as expires_at\n' +
-        '• Maximum 5 active keys per user\n' +
-        '• Permissions must be explicitly assigned (e.g., deposit, transfer, read)',
+        'Creates a new API key with specified permissions and expiry.',
     }),
     ApiResponse({
       status: 201,
@@ -91,12 +86,7 @@ export const ApiRolloverApiKey = () =>
     ApiOperation({
       summary: 'Rollover Expired API Key',
       description:
-        'Create a new API key using the same permissions as an expired key. ' +
-        'Rules:\n' +
-        '• The expired key must truly be expired\n' +
-        '• The new key reuses the same permissions\n' +
-        '• expiry must again be converted to a new expires_at value\n' +
-        '• Accepts: 1H, 1D, 1M, 1Y (Hour, Day, Month, Year)',
+        'Create a new API key using the same permissions as an expired key.'
     }),
     ApiResponse({
       status: 201,
