@@ -1,5 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/exceptions/global-exception.filter';
@@ -7,6 +8,8 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+  const logger = new Logger('Bootstrap');
 
   // Enable global exception filter
   app.useGlobalFilters(new GlobalExceptionFilter());
@@ -62,9 +65,20 @@ async function bootstrap() {
   // Enable CORS if needed
   app.enableCors();
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(
-    `Application is running on: http://localhost:${process.env.PORT ?? 3000}`,
+  const port = configService.get<number>('PORT', 3000);
+  const env = configService.get<string>('NODE_ENV', 'development');
+
+  await app.listen(port);
+
+  logger.log(
+    `
+      ------------
+      TR Wallet Service Started!
+      Environment: ${env}
+      API: http://localhost:${port}/
+      API Docs: http://localhost:${port}/docs
+      ------------
+  `,
   );
 }
 bootstrap();

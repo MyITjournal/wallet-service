@@ -1,4 +1,22 @@
 export const SYS_MESSAGES = {
+  // API Key messages
+  API_KEY_CREATED: 'API key created successfully',
+  API_KEY_UPDATED: 'API key updated successfully',
+  API_KEY_DELETED: 'API key deleted successfully',
+  API_KEY_NOT_FOUND: 'API key not found',
+  API_KEY_ROLLOVER_SUCCESS: 'API key rolled over successfully',
+  MAX_API_KEYS_REACHED: 'Maximum number of active API keys reached (5)',
+  API_KEY_STATS_RETRIEVED: 'API key statistics retrieved successfully',
+  API_KEY_LOGS_RETRIEVED: 'API key logs retrieved successfully',
+  INVALID_EXPIRY_FORMAT:
+    'Invalid expiry format. Use format like 1H, 1D, 1M, or 1Y',
+  API_KEY_EXPIRED: 'API key has expired',
+  API_KEY_INVALID: 'Invalid API key',
+  API_KEY_INACTIVE: 'API key is inactive',
+  INSUFFICIENT_PERMISSIONS: 'Insufficient permissions for this operation',
+  EXPIRED_KEY_NOT_FOUND: 'Expired API key not found for rollover',
+  API_KEY_ALREADY_ACTIVE: 'Cannot rollover an active API key',
+
   // Authentication messages
   AUTHENTICATION_SUCCESS: 'Google authentication successful',
   AUTHENTICATION_FAILED: 'Google authentication failed',
