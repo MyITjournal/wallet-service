@@ -5,7 +5,6 @@ import { PaymentsService } from './payments.service';
 import { Transaction } from './entities/transaction.entity';
 import { WalletModule } from '../wallet/wallet.module';
 import { PaymentModelActions } from './model-actions/payment.model-actions';
-import { PaystackApiService } from '../../common/services/paystack-api.service';
 
 @Module({
   imports: [

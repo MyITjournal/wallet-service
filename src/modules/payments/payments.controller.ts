@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators';
 import type { PaystackWebhookPayload } from '../../common/interfaces/paystack.interface';
 import type { JwtPayload } from '../../common/interfaces/jwt.interface';
+import { TransactionStatus } from '../../common/enums';
 
 @Controller('payments')
 export class PaymentsController {
@@ -79,102 +80,10 @@ export class PaymentsController {
   @Get('callback')
   async handleCallback(@Query('reference') reference: string) {
     if (!reference || reference.trim() === '') {
-      return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Payment Error</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-              .error { color: #d32f2f; }
-            </style>
-          </head>
-          <body>
-            <h1 class="error">Payment Error</h1>
-            <p>Invalid payment reference</p>
-          </body>
-        </html>
-      `;
+      throw new BadRequestException(SYS_MESSAGES.INVALID_INPUT);
     }
 
-    try {
-      // Auto-verify the payment
-      const result = await this.paymentsService.getTransactionStatus(
-        reference,
-        true,
-      );
-
-      const isSuccess = result.status === 'success';
-      const statusColor = isSuccess ? '#4caf50' : '#ff9800';
-      const statusText = isSuccess ? 'Payment Successful!' : 'Payment Pending';
-
-      return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Payment Status</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-              .status { color: ${statusColor}; margin: 20px 0; }
-              .details { background: #f5f5f5; padding: 20px; border-radius: 8px; max-width: 500px; margin: 20px auto; }
-              .detail-row { display: flex; justify-content: space-between; margin: 10px 0; }
-              .label { font-weight: bold; }
-              button { background: #1976d2; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 20px; }
-              button:hover { background: #1565c0; }
-            </style>
-          </head>
-          <body>
-            <h1 class="status">${statusText}</h1>
-            <div class="details">
-              <div class="detail-row">
-                <span class="label">Reference:</span>
-                <span>${result.reference}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Amount:</span>
-                <span>₦${(result.amount / 100).toFixed(2)}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Status:</span>
-                <span>${result.status}</span>
-              </div>
-              ${
-                result.paid_at
-                  ? `
-              <div class="detail-row">
-                <span class="label">Paid At:</span>
-                <span>${new Date(result.paid_at).toLocaleString()}</span>
-              </div>
-              `
-                  : ''
-              }
-            </div>
-            <button onclick="window.close()">Close Window</button>
-            <script>
-              // Auto-close after 5 seconds if payment is successful
-              ${isSuccess ? 'setTimeout(() => window.close(), 5000);' : ''}
-            </script>
-          </body>
-        </html>
-      `;
-    } catch (error) {
-      return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Payment Error</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-              .error { color: #d32f2f; }
-            </style>
-          </head>
-          <body>
-            <h1 class="error">Payment Verification Error</h1>
-            <p>${error.message || 'Unable to verify payment'}</p>
-            <button onclick="window.close()" style="background: #1976d2; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 20px;">Close Window</button>
-          </body>
-        </html>
-      `;
-    }
+    // Auto-verify the payment and return JSON response
+    return this.paymentsService.getTransactionStatus(reference, true);
   }
 }

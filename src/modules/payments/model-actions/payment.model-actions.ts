@@ -125,7 +125,9 @@ export class PaymentModelActions extends AbstractModelAction<Transaction> {
   /**
    * Create transaction from Paystack data
    */
-  async createTransactionFromPaystack(paystackData: PaystackTransactionData): Promise<Transaction> {
+  async createTransactionFromPaystack(
+    paystackData: PaystackTransactionData,
+  ): Promise<Transaction> {
     const transactionData = {
       reference: paystackData.reference,
       amount: (paystackData.amount || 0) / 100,
