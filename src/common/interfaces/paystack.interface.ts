@@ -17,3 +17,17 @@ export interface PaystackTransactionData {
   authorization_url?: string;
   [key: string]: unknown;
 }
+
+export interface PaystackInitializeResponse {
+  authorization_url: string;
+  access_code: string;
+  reference: string;
+}
+
+export interface PaystackVerifyResponse {
+  reference: string;
+  status: string;
+  amount: number;
+  paid_at?: string;
+  [key: string]: unknown;
+}

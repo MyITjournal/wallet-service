@@ -7,25 +7,35 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { ApiKeysService } from '../../modules/api-keys/api-keys.service';
+import type { ApiKey } from '../../modules/api-keys/entities/api-key.entity';
+import type { Request, Response } from 'express';
+
+interface RequestWithApiKey extends Request {
+  apiKey?: ApiKey;
+}
+
+interface HttpError extends Error {
+  status?: number;
+}
 
 @Injectable()
 export class ApiKeyLoggingInterceptor implements NestInterceptor {
   constructor(private readonly apiKeysService: ApiKeysService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<RequestWithApiKey>();
+    const response = context.switchToHttp().getResponse<Response>();
     const startTime = Date.now();
 
     // Only log if API key is used
-    const apiKey = request.apiKey; // Set by the guard
+    const apiKey = request.apiKey;
     if (!apiKey) {
       return next.handle();
     }
 
     const endpoint = request.url;
     const method = request.method;
-    const ipAddress = request.ip || request.connection.remoteAddress;
+    const ipAddress = (request.ip || request.socket?.remoteAddress) as string;
     const userAgent = request.headers['user-agent'];
 
     return next.handle().pipe(
@@ -44,9 +54,11 @@ export class ApiKeyLoggingInterceptor implements NestInterceptor {
             userAgent,
             responseTime,
           )
-          .catch((err) => console.error('Failed to log API key usage:', err));
+          .catch((err: Error) =>
+            console.error('Failed to log API key usage:', err),
+          );
       }),
-      catchError((error) => {
+      catchError((error: HttpError) => {
         const responseTime = Date.now() - startTime;
         const statusCode = error.status || 500;
         const errorMessage = error.message || 'Unknown error';
@@ -63,7 +75,9 @@ export class ApiKeyLoggingInterceptor implements NestInterceptor {
             responseTime,
             errorMessage,
           )
-          .catch((err) => console.error('Failed to log API key usage:', err));
+          .catch((err: Error) =>
+            console.error('Failed to log API key usage:', err),
+          );
 
         return throwError(() => error);
       }),

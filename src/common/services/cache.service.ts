@@ -5,6 +5,18 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
+interface CachedUserData {
+  userId: string;
+  email: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface DuplicateTransactionData {
+  reference: string;
+  authorization_url: string;
+}
+
 @Injectable()
 export class CacheService {
   private cache = new Map<string, CacheEntry<any>>();
@@ -26,25 +38,25 @@ export class CacheService {
   /**
    * Check if a duplicate transaction exists in cache
    */
-  async checkDuplicateTransaction(
+  checkDuplicateTransaction(
     amount: number,
     userId?: number,
-  ): Promise<{ reference: string; authorization_url: string } | null> {
+  ): DuplicateTransactionData | null {
     const key = this.getDuplicateTransactionKey(amount, userId);
-    return this.get<{ reference: string; authorization_url: string }>(key);
+    return this.get<DuplicateTransactionData>(key);
   }
 
   /**
    * Cache a pending transaction for 5 minutes to prevent duplicates
    */
-  async cachePendingTransaction(
+  cachePendingTransaction(
     amount: number,
     reference: string,
     authorizationUrl: string,
     userId?: number,
-  ): Promise<void> {
+  ): void {
     const key = this.getDuplicateTransactionKey(amount, userId);
-    const value = {
+    const value: DuplicateTransactionData = {
       reference,
       authorization_url: authorizationUrl,
     };
@@ -56,10 +68,7 @@ export class CacheService {
   /**
    * Invalidate duplicate transaction cache
    */
-  async invalidateDuplicateTransaction(
-    amount: number,
-    userId?: number,
-  ): Promise<void> {
+  invalidateDuplicateTransaction(amount: number, userId?: number): void {
     const key = this.getDuplicateTransactionKey(amount, userId);
     this.delete(key);
   }
@@ -67,7 +76,7 @@ export class CacheService {
   /**
    * Cache user data for faster access
    */
-  async cacheUser(userId: number, userData: any, ttl = 3600000): Promise<void> {
+  cacheUser(userId: number, userData: CachedUserData, ttl = 3600000): void {
     const key = `user:${userId}`;
     this.set(key, userData, ttl);
   }
@@ -75,15 +84,15 @@ export class CacheService {
   /**
    * Get cached user data
    */
-  async getCachedUser(userId: number): Promise<any> {
+  getCachedUser(userId: number): CachedUserData | null {
     const key = `user:${userId}`;
-    return this.get(key);
+    return this.get<CachedUserData>(key);
   }
 
   /**
    * Invalidate user cache
    */
-  async invalidateUser(userId: number): Promise<void> {
+  invalidateUser(userId: number): void {
     const key = `user:${userId}`;
     this.delete(key);
   }
@@ -102,13 +111,13 @@ export class CacheService {
       return null;
     }
 
-    return entry.value;
+    return entry.value as T;
   }
 
   /**
    * Generic set method with TTL
    */
-  private set(key: string, value: any, ttl: number): void {
+  private set<T>(key: string, value: T, ttl: number): void {
     const expiresAt = Date.now() + ttl;
     this.cache.set(key, { value, expiresAt });
   }

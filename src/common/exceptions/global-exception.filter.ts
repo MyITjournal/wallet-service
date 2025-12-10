@@ -40,7 +40,6 @@ interface IErrorResponse {
   timestamp: string;
   path: string;
   method: string;
-  stack?: string;
 }
 
 interface IRequestWithUser extends Request {
@@ -61,8 +60,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status: number;
     let message: string | string[];
     let error: string | null = null;
-    let stack: string | undefined;
-    const isDev = process.env.NODE_ENV !== 'production';
 
     // Handle HttpException and its subclasses
     if (exception instanceof HttpException) {
@@ -82,14 +79,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message = 'An error occurred';
       }
 
-      // Capture stack trace for HttpException
-      stack = exception instanceof Error ? exception.stack : undefined;
-
       // Log HttpException
       const logMessage = `${exception.name || 'HttpException'}: ${Array.isArray(message) ? message.join(', ') : message} - Status: ${status} - Path: ${request.method} ${request.url} - UserId: ${request.user?.id || 'anonymous'}`;
       const logLevel = status >= 500 ? 'error' : 'warn';
       if (logLevel === 'error') {
-        this.logger.error(logMessage, stack);
+        this.logger.error(logMessage);
       } else {
         this.logger.warn(logMessage);
       }
@@ -122,11 +116,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = 'Database operation failed';
       error = dbError.code || 'DATABASE_ERROR';
-      stack = dbError.stack;
 
       this.logger.error(
         `Database Error: ${dbError.message || 'Unknown database error'} - Code: ${error} - Path: ${request.method} ${request.url}`,
-        stack,
       );
     }
     // Handle unknown errors
@@ -137,16 +129,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       const errorMessage =
         exception instanceof Error ? exception.message : 'Unknown error';
-      const errorStack =
-        exception instanceof Error ? exception.stack : undefined;
 
       // Log full error details
       this.logger.error(
         `Unhandled Exception: ${errorMessage} - Path: ${request.method} ${request.url} - UserId: ${request.user?.id || 'anonymous'}`,
-        errorStack,
       );
-
-      stack = errorStack;
     }
 
     // Normalize message - keep as string or array based on original format
@@ -161,17 +148,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
     };
-
-    // Only include stack trace in development
-    if (isDev && stack) {
-      errorResponse.stack = stack;
-    }
-
-    // Sanitize response in production for security
-    if (!isDev && status >= 500) {
-      errorResponse.message = 'An internal server error occurred';
-      errorResponse.error = 'Internal Server Error';
-    }
 
     response.status(status).json(errorResponse);
   }

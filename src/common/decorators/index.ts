@@ -3,6 +3,7 @@ import {
   createParamDecorator,
   ExecutionContext,
 } from '@nestjs/common';
+import type { AuthenticatedUser } from '../interfaces/jwt.interface';
 
 // ============================================================================
 // SKIP WRAP DECORATOR
@@ -52,18 +53,20 @@ export const RequirePermission = (permission: string) =>
  * Parameter decorator to extract the current authenticated user from request
  * Works with both JWT authentication and API key authentication
  *
- * @returns The user object attached to request by authentication guards
+ * @returns The authenticated user object attached to request by authentication guards
  *
  * @example
  * @Get('profile')
  * @UseGuards(JwtAuthGuard)
- * getProfile(@CurrentUser() user: any) {
+ * getProfile(@CurrentUser() user: AuthenticatedUser) {
  *   return { userId: user.userId, email: user.email };
  * }
  */
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest();
+  (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
+    const request = ctx
+      .switchToHttp()
+      .getRequest<{ user: AuthenticatedUser }>();
     return request.user;
   },
 );

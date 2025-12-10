@@ -5,8 +5,13 @@ import * as crypto from 'crypto';
 import {
   PaystackException,
   ConfigurationException,
+  type PaystackErrorResponse,
 } from '../exceptions/custom-exceptions';
-import { PaystackWebhookPayload } from '../interfaces/paystack.interface';
+import {
+  PaystackWebhookPayload,
+  PaystackInitializeResponse,
+  PaystackVerifyResponse,
+} from '../interfaces/paystack.interface';
 
 @Injectable()
 export class PaystackApiService {
@@ -21,7 +26,7 @@ export class PaystackApiService {
     reference: string,
     amount: number,
     email: string,
-  ): Promise<any> {
+  ): Promise<PaystackInitializeResponse> {
     const secretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
     if (!secretKey) {
       throw new ConfigurationException('PAYSTACK_SECRET_KEY');
@@ -49,18 +54,18 @@ export class PaystackApiService {
         },
       );
 
-      if (
-        !response.data ||
-        !response.data.data ||
-        !response.data.data.authorization_url
-      ) {
+      const responseData = response.data as {
+        data?: PaystackInitializeResponse;
+      };
+      const data = responseData.data;
+      if (!data?.authorization_url) {
         throw new PaystackException('Invalid response from Paystack');
       }
 
-      return response.data.data;
+      return data;
     } catch (error) {
       if (error instanceof PaystackException) throw error;
-      const axiosError = error as AxiosError;
+      const axiosError = error as AxiosError<PaystackErrorResponse>;
       throw new PaystackException(
         'Failed to initialize transaction',
         axiosError.response?.data,
@@ -71,7 +76,7 @@ export class PaystackApiService {
   /**
    * Verify a transaction with Paystack
    */
-  async verifyTransaction(reference: string): Promise<any> {
+  async verifyTransaction(reference: string): Promise<PaystackVerifyResponse> {
     const secretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
     if (!secretKey) {
       throw new ConfigurationException('PAYSTACK_SECRET_KEY');
@@ -88,9 +93,10 @@ export class PaystackApiService {
         },
       );
 
-      return response.data.data;
+      const responseData = response.data as { data: PaystackVerifyResponse };
+      return responseData.data;
     } catch (error) {
-      const axiosError = error as AxiosError;
+      const axiosError = error as AxiosError<PaystackErrorResponse>;
       throw new PaystackException(
         `Failed to verify transaction: ${reference}`,
         axiosError.response?.data,
@@ -152,14 +158,18 @@ export class PaystackApiService {
         },
       );
 
-      if (!response.data?.data?.recipient_code) {
+      const responseData = response.data as {
+        data?: { recipient_code?: string };
+      };
+      const recipientCode = responseData.data?.recipient_code;
+      if (!recipientCode) {
         throw new PaystackException('Failed to create transfer recipient');
       }
 
-      return response.data.data.recipient_code;
+      return recipientCode;
     } catch (error) {
       if (error instanceof PaystackException) throw error;
-      const axiosError = error as AxiosError;
+      const axiosError = error as AxiosError<PaystackErrorResponse>;
       throw new PaystackException(
         'Failed to create transfer recipient',
         axiosError.response?.data,
@@ -198,7 +208,7 @@ export class PaystackApiService {
         },
       );
     } catch (error) {
-      const axiosError = error as AxiosError;
+      const axiosError = error as AxiosError<PaystackErrorResponse>;
       throw new PaystackException(
         'Failed to initiate transfer',
         axiosError.response?.data,
@@ -210,6 +220,6 @@ export class PaystackApiService {
    * Generate a unique payment reference
    */
   generateReference(): string {
-    return `TXN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    return `txn_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   }
 }

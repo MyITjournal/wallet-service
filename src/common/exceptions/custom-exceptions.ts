@@ -1,5 +1,10 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
+export interface PaystackErrorResponse {
+  message?: string;
+  [key: string]: unknown;
+}
+
 export class PaymentException extends HttpException {
   constructor(message: string, statusCode = HttpStatus.PAYMENT_REQUIRED) {
     super(
@@ -14,7 +19,7 @@ export class PaymentException extends HttpException {
 }
 
 export class PaystackException extends PaymentException {
-  constructor(message: string, paystackError?: any) {
+  constructor(message: string, paystackError?: PaystackErrorResponse) {
     const errorMessage = paystackError?.message || message;
     super(`Paystack Error: ${errorMessage}`, HttpStatus.BAD_GATEWAY);
   }
@@ -43,7 +48,7 @@ export class WebhookVerificationException extends HttpException {
 }
 
 export class GoogleAuthException extends HttpException {
-  constructor(message: string, originalError?: any) {
+  constructor(message: string, originalError?: Error) {
     super(
       {
         statusCode: HttpStatus.UNAUTHORIZED,
