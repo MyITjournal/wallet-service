@@ -1,5 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/exceptions/global-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -21,6 +22,42 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Swagger setup
+  const config = new DocumentBuilder()
+    .setTitle('TR Wallet Service API')
+    .setDescription('API documentation for TR Wallet Service')
+    .setVersion('1.0')
+    .addTag('Authentication', 'Google OAuth and JWT authentication endpoints')
+    .addTag('Wallet', 'Wallet management and transactions')
+    .addTag('Payments', 'Payment processing with Paystack')
+    .addTag('API Keys', 'API key management for service-to-service auth')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description:
+        'Enter JWT token obtained from the login endpoint. Format: Bearer <token>',
+    })
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'x-api-key',
+        in: 'header',
+        description: 'API key for service-to-service authentication',
+      },
+      'api-key',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    },
+  });
 
   // Enable CORS if needed
   app.enableCors();

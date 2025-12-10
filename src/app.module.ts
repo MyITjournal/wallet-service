@@ -4,10 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
-import { PaymentsModule } from './modules/payments/payments.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { User } from './modules/users/entities/user.entity';
-import { Transaction } from './modules/payments/entities/transaction.entity';
+import { WalletModule } from './modules/wallet/wallet.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { PaystackApiService } from './common/services/paystack-api.service';
 
 @Module({
   imports: [
@@ -17,23 +17,26 @@ import { Transaction } from './modules/payments/entities/transaction.entity';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('DATABASE_HOST'),
-        port: +configService.get('DATABASE_PORT'),
-        username: configService.get('DATABASE_USER'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: configService.get('DATABASE_NAME'),
-        entities: [User, Transaction],
-        synchronize: true, // ONLY for development - use migrations in production
+        host: configService.get<string>('DATABASE_HOST'),
+        port: configService.get<number>('DATABASE_PORT'),
+        username: configService.get<string>('DATABASE_USER'),
+        password: String(
+          configService.get<string>('DATABASE_PASSWORD') || 'postgres',
+        ),
+        database: configService.get<string>('DATABASE_NAME'),
+        autoLoadEntities: true,
+        synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
-      inject: [ConfigService],
     }),
     UsersModule,
-    PaymentsModule,
     AuthModule,
+    WalletModule,
+    ApiKeysModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, PaystackApiService],
 })
 export class AppModule {}
