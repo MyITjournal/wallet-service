@@ -48,7 +48,7 @@ async function bootstrap() {
         in: 'header',
         description: 'API key for service-to-service authentication',
       },
-      'api-key',
+      'x-api-key',
     )
     .build();
 
