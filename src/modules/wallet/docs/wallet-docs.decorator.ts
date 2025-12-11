@@ -2,6 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
+  ApiSecurity,
   ApiOperation,
   ApiResponse,
   ApiParam,
@@ -11,7 +12,8 @@ import {
 
 export const ApiWalletTags = () => applyDecorators(ApiTags('Wallet'));
 
-export const ApiWalletBearerAuth = () => applyDecorators(ApiBearerAuth());
+export const ApiWalletBearerAuth = () =>
+  applyDecorators(ApiBearerAuth(), ApiSecurity('x-api-key'));
 
 export const ApiWalletDeposit = () =>
   applyDecorators(
