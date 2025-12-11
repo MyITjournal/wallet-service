@@ -66,7 +66,23 @@ export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
     const request = ctx
       .switchToHttp()
-      .getRequest<{ user: AuthenticatedUser }>();
-    return request.user;
+      .getRequest<{ user?: AuthenticatedUser; apiKeyUser?: { id: string } }>();
+
+    // Check if authenticated via JWT (has user object)
+    if (request.user) {
+      return request.user;
+    }
+
+    // Check if authenticated via API key (has apiKeyUser)
+    if (request.apiKeyUser) {
+      return {
+        userId: request.apiKeyUser.id,
+        email: '',
+        name: '',
+      } as AuthenticatedUser;
+    }
+
+    // Fallback - should not reach here if guards are working
+    throw new Error('User not found in request');
   },
 );

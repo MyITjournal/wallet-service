@@ -50,9 +50,15 @@ export class JwtOrApiKeyGuard implements CanActivate {
           ipAddress,
         );
 
-        // Attach API key to request for logging interceptor
+        // Attach API key and user to request
         request.apiKey = validatedApiKey;
         request.apiKeyUser = validatedApiKey.created_by;
+        // Also set request.user for compatibility with @CurrentUser decorator
+        request.user = {
+          userId: validatedApiKey.created_by.id,
+          email: '',
+          name: '',
+        };
 
         return true;
       } catch (error) {
