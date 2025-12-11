@@ -29,9 +29,15 @@ export class JwtOrApiKeyGuard implements CanActivate {
 
     // Check if API key is present
     const apiKey = request.headers['x-api-key'];
+    console.log(
+      '🔑 JwtOrApiKeyGuard - API Key:',
+      apiKey ? 'Present' : 'Missing',
+    );
+    console.log('🔑 Headers:', JSON.stringify(request.headers, null, 2));
 
     if (apiKey && typeof apiKey === 'string') {
       // Try API key authentication
+      console.log('🔑 Attempting API key validation...');
       try {
         // Get required permission from decorator (if any)
         const requiredPermission =
@@ -50,6 +56,7 @@ export class JwtOrApiKeyGuard implements CanActivate {
           ipAddress,
         );
 
+        console.log('✅ API key validated successfully');
         // Attach API key and user to request
         request.apiKey = validatedApiKey;
         request.apiKeyUser = validatedApiKey.created_by;
@@ -64,11 +71,13 @@ export class JwtOrApiKeyGuard implements CanActivate {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Invalid API key';
+        console.log('❌ API key validation failed:', errorMessage);
         throw new UnauthorizedException(errorMessage);
       }
     }
 
     // Try JWT authentication
+    console.log('🔑 No API key, checking JWT...');
     const authHeader = request.headers['authorization'];
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
