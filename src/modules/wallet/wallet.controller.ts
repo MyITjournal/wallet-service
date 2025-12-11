@@ -42,6 +42,7 @@ import {
 @Controller('wallet')
 @ApiWalletTags()
 @ApiWalletBearerAuth()
+@ApiSecurity('x-api-key')
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
