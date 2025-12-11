@@ -303,7 +303,7 @@ Content-Type: application/json
 
 ```json
 {
-  "reference": "WALLET_FUND_1733700000000_abc123",
+  "reference": "fw_1733700000000_abc123",
   "authorization_url": "https://checkout.paystack.com/xyz"
 }
 ```
@@ -339,7 +339,7 @@ Content-Type: application/json
 {
   "event": "charge.success",
   "data": {
-    "reference": "WALLET_FUND_1733700000000_abc123",
+    "reference": "fw_1733700000000_abc123",
     "status": "success",
     "amount": 5000
   }
@@ -399,7 +399,7 @@ Authorization: Bearer {jwt_token}
 
 ```json
 {
-  "reference": "WALLET_FUND_1733700000000_abc123",
+  "reference": "fw_1733700000000_abc123",
   "status": "success",
   "amount": 5000
 }
@@ -556,7 +556,7 @@ Authorization: Bearer {jwt_token}
     "balance_before": 0.0,
     "balance_after": 500.0,
     "status": "success",
-    "reference": "WALLET_FUND_1733700000000_abc123",
+    "reference": "fw_1733700000000_abc123",
     "description": "Wallet funding via Paystack",
     "metadata": null,
     "created_at": "2025-12-09T10:00:00.000Z"

@@ -32,10 +32,6 @@ export class PaystackApiService {
       throw new ConfigurationException('PAYSTACK_SECRET_KEY');
     }
 
-    const appUrl =
-      this.configService.get<string>('APP_URL') || 'http://localhost:3000';
-    const callbackUrl = `${appUrl}/wallet/callback?reference=${reference}`;
-
     try {
       const response = await axios.post(
         `${this.paystackBaseUrl}/transaction/initialize`,
@@ -43,7 +39,6 @@ export class PaystackApiService {
           amount,
           email,
           reference,
-          callback_url: callbackUrl,
         },
         {
           headers: {

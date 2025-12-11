@@ -69,36 +69,36 @@ export class AuthService {
     };
   }
 
-  async verifyGoogleToken(googleToken: string) {
-    // Verify token and get user info from Google
-    const googleUserInfo = await this.googleApiService.verifyToken(googleToken);
+  // async verifyGoogleToken(googleToken: string) {
+  //   // Verify token and get user info from Google
+  //   const googleUserInfo = await this.googleApiService.verifyToken(googleToken);
 
-    // Find or create user in our database
-    const user = await this.findOrCreateGoogleUser({
-      google_id: googleUserInfo.googleId,
-      email: googleUserInfo.email,
-      name: googleUserInfo.name,
-      picture: googleUserInfo.picture,
-    });
+  //   // Find or create user in our database
+  //   const user = await this.findOrCreateGoogleUser({
+  //     google_id: googleUserInfo.googleId,
+  //     email: googleUserInfo.email,
+  //     name: googleUserInfo.name,
+  //     picture: googleUserInfo.picture,
+  //   });
 
-    // Increment token version to invalidate all previous tokens
-    user.token_version += 1;
-    await this.userActions.updateUserInfo(user, {});
+  //   // Increment token version to invalidate all previous tokens
+  //   user.token_version += 1;
+  //   await this.userActions.updateUserInfo(user, {});
 
-    // Generate JWT token
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      name: user.name,
-      tokenVersion: user.token_version,
-    };
-    const access_token = this.jwtService.sign(payload);
+  //   // Generate JWT token
+  //   const payload = {
+  //     sub: user.id,
+  //     email: user.email,
+  //     name: user.name,
+  //     tokenVersion: user.token_version,
+  //   };
+  //   const access_token = this.jwtService.sign(payload);
 
-    return {
-      user_id: user.id,
-      email: user.email,
-      name: user.name,
-      access_token,
-    };
-  }
+  //   return {
+  //     user_id: user.id,
+  //     email: user.email,
+  //     name: user.name,
+  //     access_token,
+  //   };
+  // }
 }

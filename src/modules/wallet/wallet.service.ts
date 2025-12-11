@@ -79,7 +79,7 @@ export class WalletService {
       throw new ForbiddenException('Wallet is locked');
     }
 
-    const reference = `WALLET_FUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const reference = `fw_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     try {
       const response = await this.paystackApi.initializeTransaction(
@@ -205,7 +205,7 @@ export class WalletService {
         throw new BadRequestException('Insufficient balance');
       }
 
-      const reference = `WALLET_WD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const reference = `wd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const balanceBefore = Number(wallet.balance);
       const balanceAfter = balanceBefore - amount;
 
@@ -342,7 +342,7 @@ export class WalletService {
         throw new BadRequestException('Insufficient balance');
       }
 
-      const reference = `TRANSFER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const reference = `tf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       const senderBalanceBefore = Number(senderWallet.balance);
       const senderBalanceAfter = senderBalanceBefore - amount;
@@ -416,20 +416,40 @@ export class WalletService {
       limit,
     );
 
-    return transactions.map((tx) => ({
-      id: tx.id,
-      type: tx.type,
-      amount: Number(tx.amount),
-      balance_before: Number(tx.balanceBefore),
-      balance_after: Number(tx.balanceAfter),
-      status: tx.status,
-      reference: tx.reference,
-      description: tx.description,
-      metadata: tx.metadata
-        ? (JSON.parse(tx.metadata) as Record<string, unknown>)
-        : null,
-      created_at: tx.created_at,
-    }));
+    return transactions.map((tx) => {
+      // Map internal types to user-friendly types
+      let type: string;
+      let flow: string;
+
+      switch (tx.type) {
+        case WalletTransactionType.CREDIT:
+          type = 'deposit';
+          flow = 'credit';
+          break;
+        case WalletTransactionType.DEBIT:
+          type = 'withdraw';
+          flow = 'debit';
+          break;
+        case WalletTransactionType.TRANSFER_IN:
+          type = 'transfer';
+          flow = 'credit';
+          break;
+        case WalletTransactionType.TRANSFER_OUT:
+          type = 'transfer';
+          flow = 'debit';
+          break;
+        default:
+          type = tx.type;
+          flow = 'credit';
+      }
+
+      return {
+        type,
+        flow,
+        amount: Number(tx.amount),
+        status: tx.status,
+      };
+    });
   }
 
   async handlePaystackWebhook(
@@ -459,7 +479,7 @@ export class WalletService {
         status === 'success' ? new Date() : undefined,
       );
 
-      if (status === 'success' && reference.startsWith('WALLET_FUND_')) {
+      if (status === 'success' && reference.startsWith('fw_')) {
         try {
           console.log(
             '[handlePaystackWebhook] Crediting wallet for reference:',

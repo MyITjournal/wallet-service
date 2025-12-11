@@ -20,14 +20,16 @@ export class CreateApiKeyDto {
   name: string;
 
   @ApiProperty({
-    description: 'Permissions to assign to the API key',
+    description: 'Permissions to assign to the API key. Allowed values: deposit, transfer, read',
     example: ['deposit', 'transfer', 'read'],
     isArray: true,
     type: String,
+    enum: ['deposit', 'transfer', 'read'],
   })
   @IsArray()
   @IsString({ each: true })
   @IsNotEmpty()
+  @IsIn(['deposit', 'transfer', 'read'], { each: true })
   permissions: string[];
 
   @ApiProperty({

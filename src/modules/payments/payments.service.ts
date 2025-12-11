@@ -112,7 +112,7 @@ export class PaymentsService {
       );
 
       // Auto-credit wallet if payment is for wallet funding
-      if (status === 'success' && reference.startsWith('WALLET_FUND_')) {
+      if (status === 'success' && reference.startsWith('fw_')) {
         try {
           await this.walletService.creditWalletFromPayment(reference);
         } catch (error) {

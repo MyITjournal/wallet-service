@@ -16,7 +16,11 @@ import {
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { JwtOrApiKeyGuard } from '../auth/guards/jwt-or-api-key.guard';
-import { CurrentUser, RequirePermission } from '../../common/decorators';
+import {
+  CurrentUser,
+  RequirePermission,
+  SkipWrap,
+} from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/interfaces/jwt.interface';
 import { FundWalletDto } from './dto/fund-wallet.dto';
 import { WithdrawWalletDto } from './dto/withdraw-wallet.dto';
@@ -44,6 +48,7 @@ export class WalletController {
   @Get('balance')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
+  @SkipWrap()
   @ApiGetWalletBalance()
   async getBalance(@CurrentUser() user: AuthenticatedUser) {
     return this.walletService.getBalance(user.userId);
@@ -53,6 +58,7 @@ export class WalletController {
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('deposit')
   @HttpCode(HttpStatus.CREATED)
+  @SkipWrap()
   @ApiWalletDeposit()
   async fundWallet(
     @CurrentUser() user: AuthenticatedUser,
@@ -83,6 +89,7 @@ export class WalletController {
   @Get('deposit/:reference/status')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
+  @SkipWrap()
   @ApiVerifyDepositStatus()
   async getDepositStatus(@Param('reference') reference: string) {
     if (!reference || reference.trim() === '') {
@@ -107,6 +114,7 @@ export class WalletController {
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('transfer')
   @HttpCode(HttpStatus.CREATED)
+  @SkipWrap()
   @ApiWalletTransfer()
   async transferToUser(
     @CurrentUser() user: AuthenticatedUser,
@@ -118,6 +126,7 @@ export class WalletController {
   @Get('transactions')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
+  @SkipWrap()
   @ApiTransactionHistory()
   async getTransactionHistory(
     @CurrentUser() user: AuthenticatedUser,

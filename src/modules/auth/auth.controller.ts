@@ -36,7 +36,6 @@ export class AuthController {
   @ApiGoogleAuth()
   async googleAuth() {
     // Passport AuthGuard automatically handles 302 redirect to Google OAuth consent page
-    // Any errors will be caught by exception filters
   }
 
   @Get('google/callback')

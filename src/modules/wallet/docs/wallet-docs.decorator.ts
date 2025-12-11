@@ -26,7 +26,7 @@ export const ApiWalletDeposit = () =>
       schema: {
         type: 'object',
         example: {
-          reference: 'TXN_12345678',
+          reference: 'fw_1702300000000_abc123xyz',
           authorization_url: 'https://paystack.co/checkout/...',
         },
         properties: {
@@ -94,7 +94,7 @@ export const ApiVerifyDepositStatus = () =>
     ApiParam({
       name: 'reference',
       description: 'Transaction reference',
-      example: 'TXN_12345678',
+      example: 'fw_1702300000000_abc123xyz',
     }),
     ApiResponse({
       status: 200,
@@ -102,7 +102,7 @@ export const ApiVerifyDepositStatus = () =>
       schema: {
         type: 'object',
         example: {
-          reference: 'TXN_12345678',
+          reference: 'fw_1702300000000_abc123xyz',
           status: 'success',
           amount: 5000,
         },

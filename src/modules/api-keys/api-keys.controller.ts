@@ -16,7 +16,7 @@ import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
 import { RolloverApiKeyDto } from './dto/rollover-api-key.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, SkipWrap } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/interfaces/jwt.interface';
 import {
   ApiApiKeysTags,
@@ -34,6 +34,7 @@ export class ApiKeysController {
 
   @Post('create')
   @ApiCreateApiKey()
+  @SkipWrap()
   async create(
     @Body() createDto: CreateApiKeyDto,
     @CurrentUser() user: AuthenticatedUser,

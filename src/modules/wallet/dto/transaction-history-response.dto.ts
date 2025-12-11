@@ -1,14 +1,20 @@
-import { ApiProperty, ApiHideProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class TransactionHistoryResponseDto {
-  @ApiHideProperty()
-  id: string;
-
   @ApiProperty({
     description: 'Transaction type',
-    example: 'credit',
+    example: 'deposit',
+    enum: ['deposit', 'withdraw', 'transfer'],
   })
   type: string;
+
+  @ApiProperty({
+    description:
+      'Money flow - credit (money coming in) or debit (money going out)',
+    example: 'credit',
+    enum: ['credit', 'debit'],
+  })
+  flow: string;
 
   @ApiProperty({
     description: 'Transaction amount',
@@ -16,27 +22,9 @@ export class TransactionHistoryResponseDto {
   })
   amount: number;
 
-  @ApiHideProperty()
-  balance_before: number;
-
-  @ApiHideProperty()
-  balance_after: number;
-
   @ApiProperty({
     description: 'Transaction status',
     example: 'success',
   })
   status: string;
-
-  @ApiHideProperty()
-  reference: string;
-
-  @ApiHideProperty()
-  description: string;
-
-  @ApiHideProperty()
-  metadata: any;
-
-  @ApiHideProperty()
-  created_at: Date;
 }

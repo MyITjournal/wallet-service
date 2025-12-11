@@ -4,6 +4,7 @@ import {
   IsArray,
   IsString,
   IsNumber,
+  IsIn,
   IsDateString,
   Min,
   Max,
@@ -21,6 +22,7 @@ export class UpdateApiKeyDto {
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
+  @IsIn(['deposit', 'transfer', 'read'], { each: true })
   permissions?: string[];
 
   @IsNumber()

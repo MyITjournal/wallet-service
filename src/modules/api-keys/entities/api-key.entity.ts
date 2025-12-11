@@ -58,7 +58,6 @@ export class ApiKey extends BaseEntity {
 
   // Check if key has permission
   hasPermission(permission: string): boolean {
-    if (this.permissions.includes('*')) return true;
     return this.permissions.includes(permission);
   }
 }
