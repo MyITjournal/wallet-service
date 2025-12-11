@@ -46,6 +46,16 @@ import {
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
+  @Get('test-headers')
+  @ApiExcludeEndpoint()
+  async testHeaders(@Headers() headers: Record<string, string>) {
+    return {
+      hasApiKey: !!headers['x-api-key'],
+      apiKeyPreview: headers['x-api-key']?.substring(0, 15) + '...',
+      allHeaders: Object.keys(headers),
+    };
+  }
+
   @Get('balance')
   @UseGuards(JwtOrApiKeyGuard)
   @RequirePermission('read')
