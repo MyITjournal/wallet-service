@@ -34,7 +34,7 @@ export class PaystackApiService {
 
     const appUrl =
       this.configService.get<string>('APP_URL') || 'http://localhost:3000';
-    const callbackUrl = `${appUrl}/payments/callback?reference=${reference}`;
+    const callbackUrl = `${appUrl}/wallet/callback?reference=${reference}`;
 
     try {
       const response = await axios.post(
