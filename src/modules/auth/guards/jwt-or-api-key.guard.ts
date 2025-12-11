@@ -5,18 +5,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtService } from '@nestjs/jwt';
 import { ApiKeysService } from '../../api-keys/api-keys.service';
 import { REQUIRED_PERMISSION_KEY } from '../../../common/decorators';
 
 @Injectable()
-export class JwtOrApiKeyGuard extends AuthGuard('jwt') implements CanActivate {
+export class JwtOrApiKeyGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly apiKeysService: ApiKeysService,
-  ) {
-    super();
-  }
+    private readonly jwtService: JwtService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<{
@@ -25,6 +24,7 @@ export class JwtOrApiKeyGuard extends AuthGuard('jwt') implements CanActivate {
       connection?: { remoteAddress?: string };
       apiKey?: unknown;
       apiKeyUser?: unknown;
+      user?: unknown;
     }>();
 
     // Check if API key is present
@@ -38,7 +38,7 @@ export class JwtOrApiKeyGuard extends AuthGuard('jwt') implements CanActivate {
           this.reflector.get<string>(
             REQUIRED_PERMISSION_KEY,
             context.getHandler(),
-          ) || '*'; // Default: any permission
+          ) || 'read'; // Default to read permission
 
         // Get client IP
         const ipAddress = request.ip || request.connection?.remoteAddress;
@@ -56,17 +56,28 @@ export class JwtOrApiKeyGuard extends AuthGuard('jwt') implements CanActivate {
 
         return true;
       } catch (error) {
-        // API key validation failed, try JWT
+        const errorMessage =
+          error instanceof Error ? error.message : 'Invalid API key';
+        throw new UnauthorizedException(errorMessage);
       }
     }
 
     // Try JWT authentication
-    try {
-      return (await super.canActivate(context)) as boolean;
-    } catch {
-      throw new UnauthorizedException(
-        'Authentication required: Provide valid JWT token or API key',
-      );
+    const authHeader = request.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const payload = await this.jwtService.verifyAsync(token);
+        request.user = payload;
+        return true;
+      } catch (error) {
+        throw new UnauthorizedException('Invalid or expired JWT token');
+      }
     }
+
+    // No valid authentication provided
+    throw new UnauthorizedException(
+      'Authentication required: Provide valid JWT token or API key',
+    );
   }
 }
