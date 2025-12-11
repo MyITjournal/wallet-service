@@ -305,14 +305,11 @@ export class WalletService {
     await queryRunner.startTransaction();
 
     try {
-      // Lock sender wallet with FOR UPDATE
-      const senderWallet = await queryRunner.manager
-        .createQueryBuilder(Wallet, 'wallet')
-        .leftJoinAndSelect('wallet.user', 'user')
-        .where('wallet.user_id = :userId', { userId: senderId })
-        .andWhere('wallet.is_deleted = :isDeleted', { isDeleted: false })
-        .setLock('pessimistic_write')
-        .getOne();
+      // Find sender wallet
+      const senderWallet = await queryRunner.manager.findOne(Wallet, {
+        where: { user: { id: senderId }, is_deleted: false },
+        relations: ['user'],
+      });
 
       if (!senderWallet) {
         throw new NotFoundException('Sender wallet not found');
@@ -322,16 +319,11 @@ export class WalletService {
         throw new ForbiddenException('Your wallet is locked');
       }
 
-      // Lock recipient wallet with FOR UPDATE
-      const recipientWallet = await queryRunner.manager
-        .createQueryBuilder(Wallet, 'wallet')
-        .leftJoinAndSelect('wallet.user', 'user')
-        .where('wallet.wallet_number = :walletNumber', {
-          walletNumber: dto.wallet_number,
-        })
-        .andWhere('wallet.is_deleted = :isDeleted', { isDeleted: false })
-        .setLock('pessimistic_write')
-        .getOne();
+      // Find recipient wallet by wallet number
+      const recipientWallet = await queryRunner.manager.findOne(Wallet, {
+        where: { walletNumber: dto.walletNumber, is_deleted: false },
+        relations: ['user'],
+      });
 
       if (!recipientWallet) {
         throw new NotFoundException('Recipient wallet not found');
@@ -364,8 +356,8 @@ export class WalletService {
         status: TransactionStatus.SUCCESS,
         reference,
         description:
-          dto.description || `Transfer to wallet ${dto.wallet_number}`,
-        metadata: JSON.stringify({ recipient_wallet: dto.wallet_number }),
+          dto.description || `Transfer to wallet ${dto.walletNumber}`,
+        metadata: JSON.stringify({ recipient_wallet: dto.walletNumber }),
       });
 
       await queryRunner.manager.save(senderTransaction);

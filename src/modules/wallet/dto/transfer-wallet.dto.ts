@@ -11,10 +11,9 @@ export class TransferWalletDto {
   @ApiProperty({
     description: 'Recipient wallet number',
     example: '4566678954356',
-    name: 'wallet_number',
   })
   @IsString()
-  wallet_number: string;
+  walletNumber: string;
 
   @ApiProperty({
     description: 'Amount to transfer (in smallest currency unit)',
